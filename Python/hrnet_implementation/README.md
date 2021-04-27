@@ -27,15 +27,6 @@ This repository provides:
 - A specific script for training the network on the COCO dataset. 
 
 If you are interested in **HigherHRNet**, please look at [*simple-HigherHRNet*](https://github.com/stefanopini/simple-HigherHRNet) 
- 
-### Examples
-
-<table>
- <tr>
-  <td align="center"><img src="./gifs/gif-01-output.gif" width="100%" height="auto" /></td>
-  <td align="center"><img src="./gifs/gif-02-output.gif" width="100%" height="auto" /></td>
- </tr>
-</table>
 
 ### Class usage
 
