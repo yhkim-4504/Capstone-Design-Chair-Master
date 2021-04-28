@@ -2,9 +2,10 @@ import numpy as np
 import cv2
 import math
 from random import randint
+from typing import Sequence
 
 class SensorVisualization:
-    def __init__(self, filepath):
+    def __init__(self, filepath: str) -> None:
         # 이미지 로드 및 압력센서 원형 그리기
         self.org_img = cv2.imread(filepath)
         self.h, self.w = self.org_img.shape[:2]
@@ -28,47 +29,62 @@ class SensorVisualization:
         # 압력센서 위치 정의
         self.pos_list = [(324, 431), (227, 485), (313, 558), (412, 502)]
 
-    def test(self):
+    # 테스트함수
+    def test(self) -> None:
         self.draw_base_pressure_circles(self.org_img)
 
         for _ in range(600):
-            overlay = self.org_img.copy()
-            
-            for pos in self.pos_list:
-                cv2.circle(overlay, pos, randint(3, 60), [40, 40, 255], -1)
-            alpha = 0.4
-            overlayed_img = cv2.addWeighted(self.org_img, 1-alpha, overlay, alpha, 0)
-            
-            r = randint(10, 90)
-            new_x, new_y = self.waist_pos[0]+abs(r * math.cos(self.theta)), self.waist_pos[1]+abs(r * math.sin(self.theta))
-            cv2.line(overlayed_img, self.waist_pos, (round(new_x), round(new_y)), (255, 0, 0), 2)
-            tri_pos = [round(new_x), round(new_y)]
-            pts = np.array([tri_pos, np.round(tri_pos+self.tri_two), np.round(tri_pos+self.tri_three)], np.int32)
-            pts = pts.reshape((-1, 1, 2))
-            cv2.polylines(overlayed_img, [pts], True, (255,0,0), 2)
-            
-            r = randint(10, 90)
-            new_x, new_y = self.neck_pos[0]+abs(r * math.cos(self.theta)), self.neck_pos[1]+abs(r * math.sin(self.theta))
-            cv2.line(overlayed_img, self.neck_pos, (round(new_x), round(new_y)), (255, 0, 0), 2)
-            tri_pos = [round(new_x), round(new_y)]
-            pts = np.array([tri_pos, np.round(tri_pos+self.tri_two), np.round(tri_pos+self.tri_three)], np.int32)
-            pts = pts.reshape((-1, 1, 2))
-            cv2.polylines(overlayed_img, [pts], True, (255,0,0), 2)
+            # 센서값 정의
+            pressure_sensors = [randint(3, 60), randint(3, 60), randint(3, 60), randint(3, 60)]
+            waist_sonic, neck_sonic = randint(10, 90), randint(10, 90)
 
-            cv2.imshow('image',overlayed_img)
+            # 시각화
+            overlayed_img = self.visualize(self.org_img, pressure_sensors, waist_sonic, neck_sonic)
 
+            # 이미지 표시 및 종료조건
+            cv2.imshow('image', overlayed_img)
             if cv2.waitKey(300) == ord('q'):
                 break
+
         cv2.destroyAllWindows()
 
-    def draw_base_pressure_circles(self, img):
+    # 센서값을 받아서 시각화(draw img with sensors)
+    def visualize(self, img: np.ndarray, pressure_sensors: Sequence, waist_sonic: int, neck_sonic: int) -> np.ndarray:
+        overlay = img.copy()
+
+        # 센서값에 따른 원 그리기
+        for pos, sensor_value in zip(self.pos_list, pressure_sensors):
+            cv2.circle(overlay, pos, sensor_value, [40, 40, 255], -1)
+
+        # 알파채널을 이용한 블랜드합성
+        alpha = 0.4
+        overlayed_img = cv2.addWeighted(self.org_img, 1-alpha, overlay, alpha, 0)
+        
+        # 허리와 목 부분 화살표(초음파센서) 그리기
+        self.draw_arrow(self.waist_pos, waist_sonic, overlayed_img)
+        self.draw_arrow(self.neck_pos, neck_sonic, overlayed_img)
+
+        return overlayed_img
+
+    def draw_arrow(self, org_pos: Sequence, r: int, img: np.ndarray) -> None:  # 화살표그리기
+        # 축 각도의 길이가 r인 선 그리기
+        new_x, new_y = round(org_pos[0]+abs(r * math.cos(self.theta))), round(org_pos[1]+abs(r * math.sin(self.theta)))
+        cv2.line(img, org_pos, (new_x, new_y), (255, 0, 0), 2)
+
+        # 회전변환한 삼각형 좌표를 이용하여 polygon 그리기
+        tri_pos = [new_x, new_y]
+        pts = np.array([tri_pos, np.round(tri_pos+self.tri_two), np.round(tri_pos+self.tri_three)], np.int32)
+        pts = pts.reshape((-1, 1, 2))
+        cv2.polylines(img, [pts], True, (255,0,0), 2)
+
+    def draw_base_pressure_circles(self, img: np.ndarray) -> None:  # 원본이미지에 압력센서 원형라인 그리기
         for pos in self.pos_list:
             for i in range(10, 0, -1):
                 circle_range = self.create_circular_mask(self.h, self.w, center=pos, radius=i*6, in_radius=(i-1)*6)
                 img[circle_range] = np.uint8(img[circle_range] * 0.04*i)
 
     @staticmethod
-    def create_circular_mask(h, w, center=None, radius=None, in_radius=0):  # 원형마스크 생성함수
+    def create_circular_mask(h: int, w: int, center=None, radius=None, in_radius=0) -> np.ndarray:  # 원형마스크 생성함수
 
         if center is None: # use the middle of the image
             center = (int(w/2), int(h/2))
@@ -85,56 +101,3 @@ class SensorVisualization:
 if __name__ == '__main__':
     sv = SensorVisualization(filepath='Python/chair_axis.png')
     sv.test()
-
-# img = cv2.imread('Python/chair_axis.png')
-# h, w = img.shape[:2]
-# der = math.atan((425-356) / (310-204))
-# theta = math.tan(der)
-
-# waist_pos = (204, 356)
-# neck_pos = (190, 130)
-# print(f'derivative : {der:.5}, theta : {theta:.5} radian')
-
-# r = 10
-# tri_x = abs(r * math.cos(math.pi/6))
-# tri_y = abs(r * math.sin(math.pi/6))
-
-# tri_two = np.dot(np.array([[math.cos(theta), -math.sin(theta)], [math.sin(theta), math.cos(theta)]]), np.array([-tri_x, tri_y]))
-# tri_three = np.dot(np.array([[math.cos(theta), -math.sin(theta)], [math.sin(theta), math.cos(theta)]]), np.array([-tri_x, -tri_y]))
-# print(tri_two, tri_three)
-
-# pos_list = [(324, 431), (227, 485), (313, 558), (412, 502)]
-# for pos in pos_list:
-#     for i in range(10, 0, -1):
-#         circle_range = create_circular_mask(h, w, center=pos, radius=i*6, in_radius=(i-1)*6)
-#         img[circle_range] = np.uint8(img[circle_range] * 0.04*i)
-
-# for _ in range(600):
-#     overlay = img.copy()
-    
-#     for pos in pos_list:
-#         cv2.circle(overlay, pos, randint(3, 60), [40, 40, 255], -1)
-#     alpha = 0.4
-#     overlayed_img = cv2.addWeighted(img, 1-alpha, overlay, alpha, 0)
-    
-#     r = randint(10, 90)
-#     new_x, new_y = waist_pos[0]+abs(r * math.cos(theta)), waist_pos[1]+abs(r * math.sin(theta))
-#     cv2.line(overlayed_img, waist_pos, (round(new_x), round(new_y)), (255, 0, 0), 2)
-#     tri_pos = [round(new_x), round(new_y)]
-#     pts = np.array([tri_pos, np.round(tri_pos+tri_two), np.round(tri_pos+tri_three)], np.int32)
-#     pts = pts.reshape((-1, 1, 2))
-#     cv2.polylines(overlayed_img, [pts], True, (255,0,0), 2)
-    
-#     r = randint(10, 90)
-#     new_x, new_y = neck_pos[0]+abs(r * math.cos(theta)), neck_pos[1]+abs(r * math.sin(theta))
-#     cv2.line(overlayed_img, neck_pos, (round(new_x), round(new_y)), (255, 0, 0), 2)
-#     tri_pos = [round(new_x), round(new_y)]
-#     pts = np.array([tri_pos, np.round(tri_pos+tri_two), np.round(tri_pos+tri_three)], np.int32)
-#     pts = pts.reshape((-1, 1, 2))
-#     cv2.polylines(overlayed_img, [pts], True, (255,0,0), 2)
-
-#     cv2.imshow('image',overlayed_img)
-#     # cv2.imshow('overlayimage',overlay)
-#     if cv2.waitKey(300) == ord('q'):
-#         break
-# cv2.destroyAllWindows()
