@@ -4,22 +4,27 @@ import math
 from random import randint
 from typing import Sequence
 
+WAIST_POS = (204, 356)
+NECK_POS = (190, 130)
+PRESSURE_SENSOR_POS_LIST = [(324, 431), (227, 485), (313, 558), (412, 502)]
+LENGTH_OF_TRIANGLE = 10
+DERIVATIVE_VALUE = (425-356) / (310-204)
+
 class SensorVisualization:
     def __init__(self, filepath: str) -> None:
         # 이미지 로드 및 압력센서 원형 그리기
         self.org_img = cv2.imread(filepath)
         self.h, self.w = self.org_img.shape[:2]
 
-        # 초음파센서 측정선 기울기 및 각도정의
-        self.der = math.atan((425-356) / (310-204))
-        self.theta = math.tan(self.der)
+        # 초음파센서 측정선 각도정의
+        self.theta = math.atan(DERIVATIVE_VALUE)
 
         # 허리 및 목 시작점 정의
-        self.waist_pos = (204, 356)
-        self.neck_pos = (190, 130)
+        self.waist_pos = WAIST_POS
+        self.neck_pos = NECK_POS
 
         # 화살표(삼각형) 좌표 및 회전변환
-        r = 10
+        r = LENGTH_OF_TRIANGLE
         tri_x = abs(r * math.cos(math.pi/6))
         tri_y = abs(r * math.sin(math.pi/6))
 
@@ -27,7 +32,7 @@ class SensorVisualization:
         self.tri_three = np.dot(np.array([[math.cos(self.theta), -math.sin(self.theta)], [math.sin(self.theta), math.cos(self.theta)]]), np.array([-tri_x, -tri_y]))
 
         # 압력센서 위치 정의
-        self.pos_list = [(324, 431), (227, 485), (313, 558), (412, 502)]
+        self.pos_list = PRESSURE_SENSOR_POS_LIST
 
     # 테스트함수
     def test(self) -> None:
