@@ -87,6 +87,70 @@ class PoseEstimation:
             self.prev_person_ids = None
             self.next_person_id = 0
 
+    def predict_and_draw(self, frame):
+        t = time.time()
+        frame = frame[:, 120:840]
+        pts = self.model.predict(frame)
+
+        if not disable_tracking:
+            boxes, pts = pts
+
+        if not disable_tracking:
+            if len(pts) > 0:
+                if self.prev_pts is None and self.prev_person_ids is None:
+                    person_ids = np.arange(self.next_person_id, len(pts) + self.next_person_id, dtype=np.int32)
+                    self.next_person_id = len(pts) + 1
+                else:
+                    boxes, pts, person_ids = find_person_id_associations(
+                        boxes=boxes, pts=pts, prev_boxes=self.prev_boxes, prev_pts=self.prev_pts, prev_person_ids=self.prev_person_ids,
+                        next_person_id=self.next_person_id, pose_alpha=0.2, similarity_threshold=0.4, smoothing_alpha=0.1,
+                    )
+                    self.next_person_id = max(self.next_person_id, np.max(person_ids) + 1)
+            else:
+                person_ids = np.array((), dtype=np.int32)
+
+            self.prev_boxes = boxes.copy()
+            self.prev_pts = pts.copy()
+            self.prev_person_ids = person_ids
+
+        else:
+            person_ids = np.arange(len(pts), dtype=np.int32)
+
+        drawed_img = frame
+        points = pts[0]
+        for i, pt in enumerate(points):
+            if (i in keypoints.keys()) and (pt[2] > 0.5):
+                if i in (3, 5, 11, 13, 15):
+                    color = (255, 0, 0)
+                else:
+                    color = (0, 0, 255)
+                cv2.circle(drawed_img, (int(pt[1]), int(pt[0])), 5, color, -1)
+                
+        for pt1, pt2 in skeleton:
+            if points[pt1][2] > 0.5 and points[pt2][2] > 0.5:
+                if pt1%2 == 1:
+                    color = (200, 0, 0)
+                else:
+                    color = (0, 0, 200)
+                cv2.line(drawed_img, (int(points[pt1][1]), int(points[pt1][0])), (int(points[pt2][1]), int(points[pt2][0])), color, 2)
+        
+        v1, v2 = (points[5] - points[3])[:2], (points[5] - points[11])[:2]
+        cos_theta = np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2))
+        rad1 = np.arccos(cos_theta) / np.pi * 180
+
+        v1, v2 = (points[6] - points[4])[:2], (points[6] - points[12])[:2]
+        cos_theta = np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2))
+        rad2 = np.arccos(cos_theta) / np.pi * 180
+        
+        fps = 1. / (time.time() - t)
+        # print(f'\rframerate: {fps:.3}, rad : {rad:.5f}', end='')
+        mean_rad = (rad1+rad2)/2
+        cv2.putText(drawed_img, f'{max(rad1, rad2):.3f} degree', (int(points[5][1]+20), int(points[5][0])), cv2.FONT_HERSHEY_COMPLEX, 0.4, (0, 0, 0), 1, cv2.LINE_AA)
+        print(f'{fps:.2f}, left : {rad1:.3f}, right : {rad2:.3f}, mean : {mean_rad:.3f}')
+
+        return drawed_img
+
+
     def test(self):
         while True:
             t = time.time()
