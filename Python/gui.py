@@ -27,7 +27,7 @@ class PoseThread(QThread):
                     pe.video.read()
                 time.sleep(0.01) 
 
-class VideoThread(QThread):
+class SensorThread(QThread):
     change_pixmap_signal = pyqtSignal(np.ndarray)
 
     def run(self):
@@ -38,7 +38,7 @@ class VideoThread(QThread):
             pressure_sensors = [randint(3, 60), randint(3, 60), randint(3, 60), randint(3, 60)]
             waist_sonic, neck_sonic = randint(10, 90), randint(10, 90)
             self.change_pixmap_signal.emit(sv.visualize(sv.org_img, pressure_sensors, waist_sonic, neck_sonic))
-            time.sleep(0.3)
+            time.sleep(0.1)
 
 class App(QWidget):
     def __init__(self):
@@ -62,7 +62,7 @@ class App(QWidget):
         grid.addWidget(self.textLabel, 1, 0)
 
         # create the video capture thread
-        self.thread = VideoThread()
+        self.thread = SensorThread()
         self.thread2 = PoseThread()
         # connect its signal to the update_image slot
         self.thread.change_pixmap_signal.connect(self.update_image)
