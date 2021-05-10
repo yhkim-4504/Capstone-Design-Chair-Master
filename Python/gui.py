@@ -28,7 +28,7 @@ class PoseThread(QThread):
                 time.sleep(0.01) 
 
 class SensorThread(QThread):
-    change_pixmap_signal = pyqtSignal(np.ndarray)
+    change_pixmap_signal = pyqtSignal(tuple)
 
     def run(self):
         # capture from web cam
@@ -38,7 +38,7 @@ class SensorThread(QThread):
             pressure_sensors = [randint(3, 60), randint(3, 60), randint(3, 60), randint(3, 60)]
             waist_sonic, neck_sonic = randint(10, 90), randint(10, 90)
             self.change_pixmap_signal.emit(sv.visualize(sv.org_img, pressure_sensors, waist_sonic, neck_sonic))
-            time.sleep(0.1)
+            time.sleep(0.4)
 
 class App(QWidget):
     def __init__(self):
@@ -52,14 +52,14 @@ class App(QWidget):
         self.image_label2 = QLabel(self)
         self.image_label2.resize(self.disply_width, self.display_height)
         # create a text label
-        self.textLabel = QLabel('Webcam')
+        self.info_label = QLabel('Webcam')
 
         # create a vertical box layout and add the two labels
         grid = QGridLayout()
         self.setLayout(grid)
         grid.addWidget(self.image_label, 0, 0)
         grid.addWidget(self.image_label2, 0, 1)
-        grid.addWidget(self.textLabel, 1, 0)
+        grid.addWidget(self.info_label, 1, 0)
 
         # create the video capture thread
         self.thread = SensorThread()
@@ -73,11 +73,16 @@ class App(QWidget):
 
 
 
-    @pyqtSlot(np.ndarray)
-    def update_image(self, cv_img):
+    @pyqtSlot(tuple)
+    def update_image(self, data):
         """Updates the image_label with a new opencv image"""
+        cv_img, pressure_sensors, waist_sonic, neck_sonic = data
         qt_img = self.convert_cv_qt(cv_img)
         self.image_label.setPixmap(qt_img)
+
+        unbalance_level = abs((sum(pressure_sensors[:2]) / (sum(pressure_sensors[:2]) + sum(pressure_sensors[2:])) - 0.5) * 100)
+        self.info_label.setText(f'불균형도 : {unbalance_level:.3}%, 허리 센서거리 : {waist_sonic}, 목 센서거리 : {neck_sonic}')
+        
 
     @pyqtSlot(np.ndarray)
     def update_image2(self, cv_img):
