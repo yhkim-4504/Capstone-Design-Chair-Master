@@ -69,7 +69,7 @@ class SensorVisualization:
         self.draw_arrow(self.waist_pos, waist_sonic, overlayed_img)
         self.draw_arrow(self.neck_pos, neck_sonic, overlayed_img)
 
-        return overlayed_img
+        return overlayed_img, pressure_sensors, waist_sonic, neck_sonic
 
     def draw_arrow(self, org_pos: Sequence, r: int, img: np.ndarray) -> None:  # 화살표그리기
         # 축 각도의 길이가 r인 선 그리기
