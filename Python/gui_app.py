@@ -6,14 +6,14 @@ import time
 from PyQt5 import QtGui
 from PyQt5.QtWidgets import QPushButton, QWidget, QApplication, QLabel, QGridLayout
 from PyQt5.QtGui import QPixmap
-from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt, QThread
+from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt, QThread, QTimer
 from random import randint
 from .sensor_visualization import SensorVisualization
 from .pose_estimation import PoseEstimation
 from .gui.dialog import YoutubeDialog, GuideDialog, temp_url
 
 class PoseThread(QThread):
-    change_pixmap_signal = pyqtSignal(np.ndarray)
+    change_pixmap_signal = pyqtSignal(tuple)
 
     def run(self):
         # capture from web cam
@@ -45,18 +45,27 @@ class GuiApp(QWidget):
         super().__init__()
         self.init_ui()
 
-        # # create the video capture thread
-        # self.thread = SensorThread()
-        # self.thread2 = PoseThread()
-        # # connect its signal to the update_image slot
-        # self.thread.change_pixmap_signal.connect(self.update_image)
-        # self.thread2.change_pixmap_signal.connect(self.update_image2)
-        # # start the thread
-        # self.thread.start()
-        # self.thread2.start()
+        self.pressure_sensors, self.waist_sonic, self.neck_sonic, self.unbalance_level, self.max_rad = -1, -1, -1, -1, -1
+        self.start_time = time.time()
+        
+        qtimer = QTimer(self)
+        qtimer.setInterval(300)
+        qtimer.timeout.connect(self.timer_out_event)
+        qtimer.start()
+
+        # create the video capture thread
+        self.thread = SensorThread()
+        self.thread2 = PoseThread()
+        # connect its signal to the update_image slot
+        self.thread.change_pixmap_signal.connect(self.update_image)
+        self.thread2.change_pixmap_signal.connect(self.update_image2)
+        # start the thread
+        self.thread.start()
+        self.thread2.start()
 
     def init_ui(self):
-        self.setWindowTitle("Qt live label demo")
+        self.setWindowTitle("GUI DEMO")
+        self.move(10, 10)
         self.disply_width = 500
         self.display_height = 900
 
@@ -65,7 +74,8 @@ class GuiApp(QWidget):
         self.image_label.resize(self.disply_width, self.display_height)
         self.image_label2 = QLabel('label2', self)
         self.image_label2.resize(self.disply_width, self.display_height)
-        self.info_label = QLabel('Webcam')
+        self.info_label = QLabel('info1', self)
+        self.time_label = QLabel('time', self)
 
         # buttons
         self.btn1 = QPushButton('btn1', self)
@@ -85,7 +95,10 @@ class GuiApp(QWidget):
         grid.addWidget(self.info_label, 1, 0)
         grid.addWidget(self.btn1, 2, 0)
         grid.addWidget(self.btn2, 2, 1)
+        grid.addWidget(self.time_label, 3, 0)
         self.setLayout(grid)
+
+        self.show()
 
     def btn1_clicked(self):
         self.guide_dialog.show()
@@ -98,21 +111,33 @@ class GuiApp(QWidget):
     def guide_no_btn(self):
         self.guide_dialog.close()
 
-    @pyqtSlot(tuple)
+    def timer_out_event(self):
+        sit_time = time.time() - self.start_time
+        time_text = time.strftime('앉은 시간 : %H시 %M분 %S초', time.gmtime(sit_time))
+        self.time_label.setText(time_text)
+
+        if sit_time > 1:
+            if (not self.youtube_dialog.isVisible()) and (not self.guide_dialog.isVisible()) and (int(sit_time) % 10 == 0):
+                self.guide_dialog.set_label(f'앉은지 {int(sit_time)}초가 지났습니다. 스트레칭을 시작하실래요?')
+                self.guide_dialog.show()
+
+    @pyqtSlot(tuple)  # Sensor Visualization
     def update_image(self, data):
         """Updates the image_label with a new opencv image"""
-        cv_img, pressure_sensors, waist_sonic, neck_sonic = data
+        cv_img, self.pressure_sensors, self.waist_sonic, self.neck_sonic = data
         qt_img = self.convert_cv_qt(cv_img)
         self.image_label.setPixmap(qt_img)
 
-        unbalance_level = abs((sum(pressure_sensors[:2]) / (sum(pressure_sensors[:2]) + sum(pressure_sensors[2:])) - 0.5) * 100)
-        self.info_label.setText(f'불균형도 : {unbalance_level:.3}%, 허리 센서거리 : {waist_sonic}, 목 센서거리 : {neck_sonic}')
+        self.unbalance_level = abs((sum(self.pressure_sensors[:2]) / (sum(self.pressure_sensors[:2]) + sum(self.pressure_sensors[2:])) - 0.5) * 100)
+        self.info_label.setText(f'불균형도 : {self.unbalance_level:.3}%, 허리 센서거리 : {self.waist_sonic}, 목 센서거리 : {self.neck_sonic}, 목 각도 : {self.max_rad:.3f}')
 
-    @pyqtSlot(np.ndarray)
-    def update_image2(self, cv_img):
+    @pyqtSlot(tuple)
+    def update_image2(self, data):  # PoseEstimation
         """Updates the image_label with a new opencv image"""
+        cv_img , self.max_rad = data
         qt_img = self.convert_cv_qt(cv_img)
         self.image_label2.setPixmap(qt_img)
+        self.info_label.setText(f'불균형도 : {self.unbalance_level:.3}%, 허리 센서거리 : {self.waist_sonic}, 목 센서거리 : {self.neck_sonic}, 목 각도 : {self.max_rad:.3f}')
     
     def convert_cv_qt(self, cv_img):
         """Convert from an opencv image to QPixmap"""
@@ -127,5 +152,4 @@ class GuiApp(QWidget):
 if __name__=="__main__":
     app = QApplication(sys.argv)
     gui_app = GuiApp()
-    gui_app.show()
     sys.exit(app.exec_())
