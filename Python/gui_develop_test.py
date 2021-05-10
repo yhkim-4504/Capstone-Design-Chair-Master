@@ -1,7 +1,3 @@
-# from pose_estimation import PoseEstimation
-from sensor_visualization import SensorVisualization
-from pose_estimation import PoseEstimation
-
 from PyQt5 import QtGui
 from PyQt5.QtWidgets import QWidget, QApplication, QLabel, QGridLayout, QPushButton, QDialog
 from PyQt5.QtGui import QPixmap
@@ -13,6 +9,8 @@ import time
 from random import randint
 from PyQt5 import QtWebEngineWidgets
 
+temp_url = "https://www.youtube.com/embed/t67_zAg5vvI?autoplay=1"
+
 class YoutubeDialog(QDialog):
     def __init__(self, parent):
         super().__init__(parent=parent)
@@ -20,7 +18,7 @@ class YoutubeDialog(QDialog):
         self.setWindowModality(Qt.ApplicationModal)
 
         self.webview = QtWebEngineWidgets.QWebEngineView(self)
-        self.webview.setUrl(QUrl("https://www.youtube.com/embed/t67_zAg5vvI?autoplay=1"))
+        self.webview.setUrl(QUrl(temp_url))
         self.webview.setGeometry(0, 0, 500, 300)
 
     def set_webview_url(self, url: str) -> None:
@@ -47,6 +45,9 @@ class GuideDialog(QDialog):
         layout.addWidget(self.no_btn, 2, 2, 2, 2)
 
         self.setLayout(layout)
+
+    def set_label(self, text):
+        self.label.setText(text)
 
 
 class App(QWidget):
@@ -99,7 +100,7 @@ class App(QWidget):
         #######################################
 
     def btn1_clicked(self):
-        self.youtube_dialog.set_webview_url('http://www.naver.com')
+        self.youtube_dialog.set_webview_url(temp_url)
         # self.youtube_dialog.show()
         self.guide_dialog.show()
         
@@ -107,10 +108,12 @@ class App(QWidget):
         pass
 
     def guide_yes_btn(self):
-        print('yes')
+        self.guide_dialog.close()
+        self.youtube_dialog.set_webview_url(temp_url)
+        self.youtube_dialog.show()
 
     def guide_no_btn(self):
-        print('no')
+        self.guide_dialog.close()
 
     def convert_cv_qt(self, cv_img):
         """Convert from an opencv image to QPixmap"""
