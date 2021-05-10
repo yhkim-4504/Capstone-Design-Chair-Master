@@ -148,7 +148,7 @@ class PoseEstimation:
         cv2.putText(drawed_img, f'{max(rad1, rad2):.3f} degree', (int(points[5][1]+20), int(points[5][0])), cv2.FONT_HERSHEY_COMPLEX, 0.4, (0, 0, 0), 1, cv2.LINE_AA)
         print(f'{fps:.2f}, left : {rad1:.3f}, right : {rad2:.3f}, mean : {mean_rad:.3f}')
 
-        return drawed_img
+        return drawed_img, max(rad1, rad2)
 
 
     def test(self):
