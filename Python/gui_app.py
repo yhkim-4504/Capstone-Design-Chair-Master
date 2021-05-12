@@ -1,10 +1,8 @@
-import sys
 import cv2
-import numpy as np
 import time
 
 from PyQt5 import QtGui
-from PyQt5.QtWidgets import QPushButton, QWidget, QApplication, QLabel, QGridLayout
+from PyQt5.QtWidgets import QPushButton, QWidget, QLabel, QGridLayout
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt, QThread, QTimer
 from random import randint
@@ -43,13 +41,17 @@ class SensorThread(QThread):
 class GuiApp(QWidget):
     def __init__(self):
         super().__init__()
-        self.init_ui()
-
-        self.pressure_sensors, self.waist_sonic, self.neck_sonic, self.unbalance_level, self.max_rad = -1, -1, -1, -1, -1
+    
         self.start_time = time.time()
+        self.pressure_sensors, self.waist_sonic, self.neck_sonic, self.unbalance_level, self.max_rad = -1, -1, -1, -1, -1
+        
+        self.sensor_label_size = (700, 700)
+        self.pose_label_size = (900, 900)
+
+        self.init_ui()
         
         qtimer = QTimer(self)
-        qtimer.setInterval(300)
+        qtimer.setInterval(900)
         qtimer.timeout.connect(self.timer_out_event)
         qtimer.start()
 
@@ -64,23 +66,21 @@ class GuiApp(QWidget):
         self.thread2.start()
 
     def init_ui(self):
-        self.setWindowTitle("GUI DEMO")
+        self.setWindowTitle("Smart Chair Posture Correction Program")
         self.move(10, 10)
-        self.disply_width = 500
-        self.display_height = 900
 
         # create the label that holds the image
         self.image_label = QLabel('label1', self)
-        self.image_label.resize(self.disply_width, self.display_height)
+        self.image_label.resize(self.sensor_label_size[0], self.sensor_label_size[1])
         self.image_label2 = QLabel('label2', self)
-        self.image_label2.resize(self.disply_width, self.display_height)
+        self.image_label2.resize(self.pose_label_size[0], self.pose_label_size[1])
         self.info_label = QLabel('info1', self)
         self.time_label = QLabel('time', self)
 
         # buttons
-        self.btn1 = QPushButton('btn1', self)
+        self.btn1 = QPushButton('테스트버튼1', self)
         self.btn1.clicked.connect(self.btn1_clicked)
-        self.btn2 = QPushButton('btn2', self)
+        self.btn2 = QPushButton('테스트버튼2', self)
 
         # dialogs
         self.youtube_dialog = YoutubeDialog(self)
@@ -125,31 +125,29 @@ class GuiApp(QWidget):
     def update_image(self, data):
         """Updates the image_label with a new opencv image"""
         cv_img, self.pressure_sensors, self.waist_sonic, self.neck_sonic = data
-        qt_img = self.convert_cv_qt(cv_img)
+        qt_img = self.convert_cv_qt(cv_img, self.sensor_label_size)
         self.image_label.setPixmap(qt_img)
 
         self.unbalance_level = abs((sum(self.pressure_sensors[:2]) / (sum(self.pressure_sensors[:2]) + sum(self.pressure_sensors[2:])) - 0.5) * 100)
-        self.info_label.setText(f'불균형도 : {self.unbalance_level:.3}%, 허리 센서거리 : {self.waist_sonic}, 목 센서거리 : {self.neck_sonic}, 목 각도 : {self.max_rad:.3f}')
+        self.update_info_label()
 
     @pyqtSlot(tuple)
     def update_image2(self, data):  # PoseEstimation
         """Updates the image_label with a new opencv image"""
         cv_img , self.max_rad = data
-        qt_img = self.convert_cv_qt(cv_img)
+        qt_img = self.convert_cv_qt(cv_img, self.pose_label_size)
         self.image_label2.setPixmap(qt_img)
+        self.update_info_label()
+
+    def update_info_label(self):
         self.info_label.setText(f'불균형도 : {self.unbalance_level:.3}%, 허리 센서거리 : {self.waist_sonic}, 목 센서거리 : {self.neck_sonic}, 목 각도 : {self.max_rad:.3f}')
     
-    def convert_cv_qt(self, cv_img):
+    def convert_cv_qt(self, cv_img, size):
         """Convert from an opencv image to QPixmap"""
         rgb_image = cv2.cvtColor(cv_img, cv2.COLOR_BGR2RGB)
         h, w, ch = rgb_image.shape
         bytes_per_line = ch * w
         convert_to_Qt_format = QtGui.QImage(rgb_image.data, w, h, bytes_per_line, QtGui.QImage.Format_RGB888)
-        p = convert_to_Qt_format.scaled(self.disply_width, self.display_height, Qt.KeepAspectRatio)
-        return QPixmap.fromImage(p)
-    
+        p = convert_to_Qt_format.scaled(size[0], size[1], Qt.KeepAspectRatio)
 
-if __name__=="__main__":
-    app = QApplication(sys.argv)
-    gui_app = GuiApp()
-    sys.exit(app.exec_())
+        return QPixmap.fromImage(p)
