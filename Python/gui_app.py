@@ -14,7 +14,6 @@ class PoseThread(QThread):
     change_pixmap_signal = pyqtSignal(tuple)
 
     def run(self):
-        # capture from web cam
         pe = PoseEstimation('Python/hrnet_implementation/video_cut.mp4')
 
         while True:
@@ -29,8 +28,7 @@ class SensorThread(QThread):
     change_pixmap_signal = pyqtSignal(tuple)
 
     def run(self):
-        # capture from web cam
-        sv = SensorVisualization(filepath='Python/chair_axis.png')
+        sv = SensorVisualization(filepath='Python/imgs/chair_axis.png')
         sv.draw_base_pressure_circles(sv.org_img)
         while True:
             pressure_sensors = [randint(3, 60), randint(3, 60), randint(3, 60), randint(3, 60)]
@@ -41,15 +39,17 @@ class SensorThread(QThread):
 class GuiApp(QWidget):
     def __init__(self):
         super().__init__()
-    
+
+        # set variables
         self.start_time = time.time()
         self.pressure_sensors, self.waist_sonic, self.neck_sonic, self.unbalance_level, self.max_rad = -1, -1, -1, -1, -1
-        
         self.sensor_label_size = (700, 700)
         self.pose_label_size = (900, 900)
 
+        # initiate ui setting
         self.init_ui()
         
+        # set QTimer
         qtimer = QTimer(self)
         qtimer.setInterval(900)
         qtimer.timeout.connect(self.timer_out_event)
@@ -58,9 +58,11 @@ class GuiApp(QWidget):
         # create the video capture thread
         self.thread = SensorThread()
         self.thread2 = PoseThread()
+
         # connect its signal to the update_image slot
         self.thread.change_pixmap_signal.connect(self.update_image)
         self.thread2.change_pixmap_signal.connect(self.update_image2)
+
         # start the thread
         self.thread.start()
         self.thread2.start()
@@ -75,7 +77,13 @@ class GuiApp(QWidget):
         self.image_label2 = QLabel('label2', self)
         self.image_label2.resize(self.pose_label_size[0], self.pose_label_size[1])
         self.info_label = QLabel('info1', self)
+        # self.info_label.setFont(QtGui.QFont("맑은고딕", 20))
         self.time_label = QLabel('time', self)
+
+        waiting_img = self.convert_cv_qt(cv2.imread('Python/imgs/waiting_sensor.jpg'), self.sensor_label_size)
+        self.image_label.setPixmap(waiting_img)
+        waiting_img = self.convert_cv_qt(cv2.imread('Python/imgs/waiting_webcam.jpg'), self.sensor_label_size)
+        self.image_label2.setPixmap(waiting_img)
 
         # buttons
         self.btn1 = QPushButton('테스트버튼1', self)
