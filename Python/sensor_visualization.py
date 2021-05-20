@@ -104,5 +104,5 @@ class SensorVisualization:
         return mask
 
 if __name__ == '__main__':
-    sv = SensorVisualization(filepath='Python/chair_axis.png')
+    sv = SensorVisualization(filepath='Python/imgs/chair_axis.png')
     sv.test()
