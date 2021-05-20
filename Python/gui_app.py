@@ -2,7 +2,7 @@ import cv2
 import time
 
 from PyQt5 import QtGui
-from PyQt5.QtWidgets import QPushButton, QWidget, QLabel, QGridLayout
+from PyQt5.QtWidgets import QPushButton, QWidget, QLabel, QGridLayout, QGroupBox
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt, QThread, QTimer
 from random import randint
@@ -77,8 +77,20 @@ class GuiApp(QWidget):
         self.image_label2 = QLabel('label2', self)
         self.image_label2.resize(self.pose_label_size[0], self.pose_label_size[1])
         self.info_label = QLabel('info1', self)
-        # self.info_label.setFont(QtGui.QFont("맑은고딕", 20))
+        self.info_label.setFont(QtGui.QFont("맑은고딕", 20))
         self.time_label = QLabel('time', self)
+
+        # FOR TEST
+        group_box1 = QGroupBox('Sensor Visualization')
+        group_box1_grid = QGridLayout()
+        group_box1_grid.addWidget(self.image_label)
+        group_box1.setLayout(group_box1_grid)
+
+        group_box2 = QGroupBox('Angle Measurement')
+        group_box2_grid = QGridLayout()
+        group_box2_grid.addWidget(self.image_label2)
+        group_box2.setLayout(group_box2_grid)
+        # FOR TEST
 
         waiting_img = self.convert_cv_qt(cv2.imread('Python/imgs/waiting_sensor.jpg'), self.sensor_label_size)
         self.image_label.setPixmap(waiting_img)
@@ -98,9 +110,9 @@ class GuiApp(QWidget):
 
         # create a vertical box layout and add the two labels
         grid = QGridLayout()
-        grid.addWidget(self.image_label, 0, 0)
-        grid.addWidget(self.image_label2, 0, 1)
-        grid.addWidget(self.info_label, 1, 0)
+        grid.addWidget(group_box1, 0, 0)
+        grid.addWidget(group_box2, 0, 1)
+        grid.addWidget(self.info_label, 1, 0, 1, 2)
         grid.addWidget(self.btn1, 2, 0)
         grid.addWidget(self.btn2, 2, 1)
         grid.addWidget(self.time_label, 3, 0)
@@ -125,7 +137,7 @@ class GuiApp(QWidget):
         self.time_label.setText(time_text)
 
         if sit_time > 1:
-            if (not self.youtube_dialog.isVisible()) and (not self.guide_dialog.isVisible()) and (int(sit_time) % 10 == 0):
+            if (not self.youtube_dialog.isVisible()) and (not self.guide_dialog.isVisible()) and (int(sit_time) % 5 == 0):
                 self.guide_dialog.set_label(f'앉은지 {int(sit_time)}초가 지났습니다. 스트레칭을 시작하실래요?')
                 self.guide_dialog.show()
 
@@ -148,7 +160,7 @@ class GuiApp(QWidget):
         self.update_info_label()
 
     def update_info_label(self):
-        self.info_label.setText(f'불균형도 : {self.unbalance_level:.3}%, 허리 센서거리 : {self.waist_sonic}, 목 센서거리 : {self.neck_sonic}, 목 각도 : {self.max_rad:.3f}')
+        self.info_label.setText(f'불균형도 : {self.unbalance_level:.3}%, 허리 센서거리 : {self.waist_sonic}cm, 목 센서거리 : {self.neck_sonic}cm, 목 각도 : {self.max_rad:.1f}도')
     
     def convert_cv_qt(self, cv_img, size):
         """Convert from an opencv image to QPixmap"""
