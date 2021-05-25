@@ -9,20 +9,23 @@ from random import randint
 from .sensor_visualization import SensorVisualization
 from .pose_estimation import PoseEstimation
 from .gui.dialog import YoutubeDialog, GuideDialog, temp_url
+from .tts_guide import TTS
+from multiprocessing import Process
 
 class PoseThread(QThread):
     change_pixmap_signal = pyqtSignal(tuple)
 
     def run(self):
         pe = PoseEstimation('Python/hrnet_implementation/video_cut.mp4')
+        # pe = PoseEstimation(filename=None)
 
         while True:
             ret, cv_img = pe.video.read()
             if ret:
                 self.change_pixmap_signal.emit(pe.predict_and_draw(cv_img))
-                for _ in range(20):
-                    pe.video.read()
-                time.sleep(0.01) 
+                # for _ in range(20):
+                #     pe.video.read()
+                # time.sleep(0.01) 
 
 class SensorThread(QThread):
     change_pixmap_signal = pyqtSignal(tuple)
@@ -39,6 +42,10 @@ class SensorThread(QThread):
 class GuiApp(QWidget):
     def __init__(self):
         super().__init__()
+
+        self.tts = TTS('tts.mp3')
+        self.tts_process= Process(target=self.tts.run, args=('안녕하세요. 자세교정을 시작하겠습니다.', ))
+        self.tts_process.start()
 
         # set variables
         self.start_time = time.time()
@@ -98,9 +105,9 @@ class GuiApp(QWidget):
         self.image_label2.setPixmap(waiting_img)
 
         # buttons
-        self.btn1 = QPushButton('테스트버튼1', self)
+        self.btn1 = QPushButton('btn1', self)
         self.btn1.clicked.connect(self.btn1_clicked)
-        self.btn2 = QPushButton('테스트버튼2', self)
+        self.btn2 = QPushButton('btn2', self)
 
         # dialogs
         self.youtube_dialog = YoutubeDialog(self)
@@ -135,10 +142,14 @@ class GuiApp(QWidget):
         sit_time = time.time() - self.start_time
         time_text = time.strftime('앉은 시간 : %H시 %M분 %S초', time.gmtime(sit_time))
         self.time_label.setText(time_text)
-
+        
         if sit_time > 1:
-            if (not self.youtube_dialog.isVisible()) and (not self.guide_dialog.isVisible()) and (int(sit_time) % 5 == 0):
+            if (not self.youtube_dialog.isVisible()) and (not self.guide_dialog.isVisible()) and (int(sit_time) % 3 == 0):
                 self.guide_dialog.set_label(f'앉은지 {int(sit_time)}초가 지났습니다. 스트레칭을 시작하실래요?')
+                if self.tts_process.is_alive:
+                    self.tts_process.terminate()
+                self.tts_process = Process(target=self.tts.run, args=(f'앉은지 {int(sit_time)}초가 지났습니다. 스트레칭을 시작하실래요?', ))
+                self.tts_process.start()
                 self.guide_dialog.show()
 
     @pyqtSlot(tuple)  # Sensor Visualization
