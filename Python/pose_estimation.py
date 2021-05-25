@@ -87,9 +87,14 @@ class PoseEstimation:
             self.prev_person_ids = None
             self.next_person_id = 0
 
-    def predict_and_draw(self, frame):
+    def predict_and_draw(self, frame: np.ndarray):
         t = time.time()
-        frame = frame[:, 120:840]
+        h, w = frame.shape[:2]
+        ratio = min(h/image_resolution[1], w/image_resolution[0])
+        div_h = int((h - image_resolution[1]*ratio) / 2)
+        div_w = int((w - image_resolution[0]*ratio) / 2)
+        frame = frame[div_h:h-div_h, div_w:w-div_w]
+        
         pts = self.model.predict(frame)
 
         if not disable_tracking:
