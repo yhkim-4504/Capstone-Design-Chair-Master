@@ -1,8 +1,9 @@
 import cv2
 import time
+import serial
 
 from PyQt5 import QtGui
-from PyQt5.QtWidgets import QPushButton, QWidget, QLabel, QGridLayout, QGroupBox
+from PyQt5.QtWidgets import QDialog, QPushButton, QWidget, QLabel, QGridLayout, QGroupBox, QInputDialog
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt, QThread, QTimer
 from random import randint
@@ -30,18 +31,42 @@ class PoseThread(QThread):
 class SensorThread(QThread):
     change_pixmap_signal = pyqtSignal(tuple)
 
+    def __init__(self, parent, arduino_serial):
+        super().__init__(parent=parent)
+        self.arduino_serial = arduino_serial
+
     def run(self):
         sv = SensorVisualization(filepath='Python/imgs/chair_axis.png')
         sv.draw_base_pressure_circles(sv.org_img)
         while True:
-            pressure_sensors = [randint(3, 60), randint(3, 60), randint(3, 60), randint(3, 60)]
-            waist_sonic, neck_sonic = randint(10, 90), randint(10, 90)
-            self.change_pixmap_signal.emit(sv.visualize(sv.org_img, pressure_sensors, waist_sonic, neck_sonic))
+            sensor_data = self.arduino_serial.readline().decode().split(';')
+            # pressure_sensors = [randint(3, 60), randint(3, 60), randint(3, 60), randint(3, 60)]
+            # waist_sonic, neck_sonic = randint(10, 90), randint(10, 90)
+            # self.change_pixmap_signal.emit(sv.visualize(sv.org_img, pressure_sensors, waist_sonic, neck_sonic, 60))
+            pressure_sensors = list(map(int, sensor_data[0:4]))
+            waist_sonic, neck_sonic = list(map(int, sensor_data[4:6]))
+            self.change_pixmap_signal.emit(sv.visualize(sv.org_img, pressure_sensors, waist_sonic, neck_sonic, 1024))
             time.sleep(0.4)
 
 class GuiApp(QWidget):
     def __init__(self):
         super().__init__()
+        self.move(10, 10)
+        self.setWindowTitle("Smart Chair Posture Correction Program")
+        self.show()
+        
+        text, ok = QInputDialog.getText(self, 'Serial Port Setting', '아두이노와 연결된 포트를 입력해주세요.')
+
+        while True:
+            try:
+                self.arduino_serial = serial.Serial(text, 9600)
+                break
+            except:
+                text, ok = QInputDialog.getText(self, 'Serial Port Setting', '연결에 실패했습니다. 다시 입력하거나 취소를 눌러주세요.')
+                if not ok:
+                    self.arduino_serial = None
+                    break
+
 
         self.tts = TTS('tts.mp3')
         self.tts_process= Process(target=self.tts.run, args=('안녕하세요. 자세교정을 시작하겠습니다.', ))
@@ -63,21 +88,19 @@ class GuiApp(QWidget):
         qtimer.start()
 
         # create the video capture thread
-        self.thread = SensorThread()
-        self.thread2 = PoseThread()
+        self.thread = SensorThread(self, self.arduino_serial)
+        self.thread2 = PoseThread(self)
 
         # connect its signal to the update_image slot
         self.thread.change_pixmap_signal.connect(self.update_image)
         self.thread2.change_pixmap_signal.connect(self.update_image2)
 
         # start the thread
-        self.thread.start()
+        if self.arduino_serial is not None:
+            self.thread.start()
         self.thread2.start()
 
     def init_ui(self):
-        self.setWindowTitle("Smart Chair Posture Correction Program")
-        self.move(10, 10)
-
         # create the label that holds the image
         self.image_label = QLabel('label1', self)
         self.image_label.resize(self.sensor_label_size[0], self.sensor_label_size[1])
@@ -125,8 +148,6 @@ class GuiApp(QWidget):
         grid.addWidget(self.time_label, 3, 0)
         self.setLayout(grid)
 
-        self.show()
-
     def btn1_clicked(self):
         self.guide_dialog.show()
 
@@ -171,7 +192,7 @@ class GuiApp(QWidget):
         self.update_info_label()
 
     def update_info_label(self):
-        self.info_label.setText(f'불균형도 : {self.unbalance_level:.3}%, 허리 센서거리 : {self.waist_sonic}cm, 목 센서거리 : {self.neck_sonic}cm, 목 각도 : {self.max_rad:.1f}도')
+        self.info_label.setText(f'불균형도 : {float(self.unbalance_level):.3f}%, 허리 센서거리 : {self.waist_sonic}cm, 목 센서거리 : {self.neck_sonic}cm, 목 각도 : {float(self.max_rad):.1f}도')
     
     def convert_cv_qt(self, cv_img, size):
         """Convert from an opencv image to QPixmap"""
