@@ -3,7 +3,7 @@ import time
 import serial
 
 from PyQt5 import QtGui
-from PyQt5.QtWidgets import QDialog, QPushButton, QWidget, QLabel, QGridLayout, QGroupBox, QInputDialog
+from PyQt5.QtWidgets import QPushButton, QWidget, QLabel, QGridLayout, QGroupBox, QInputDialog
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt, QThread, QTimer
 from random import randint
@@ -74,9 +74,11 @@ class GuiApp(QWidget):
 
         # set variables
         self.start_time = time.time()
-        self.pressure_sensors, self.waist_sonic, self.neck_sonic, self.unbalance_level, self.max_rad = -1, -1, -1, -1, -1
+        self.pressure_sensors, self.waist_sonic, self.neck_sonic, self.unbalance_level, self.max_rad = -1, -1, -1, -1, 360
         self.sensor_label_size = (700, 700)
         self.pose_label_size = (900, 900)
+        self.average_unbalance = []
+        self.average_degree = []
 
         # initiate ui setting
         self.init_ui()
@@ -110,7 +112,7 @@ class GuiApp(QWidget):
         self.info_label.setFont(QtGui.QFont("맑은고딕", 20))
         self.time_label = QLabel('time', self)
 
-        # FOR TEST
+        # GROUP BOX
         group_box1 = QGroupBox('Sensor Visualization')
         group_box1_grid = QGridLayout()
         group_box1_grid.addWidget(self.image_label)
@@ -120,8 +122,8 @@ class GuiApp(QWidget):
         group_box2_grid = QGridLayout()
         group_box2_grid.addWidget(self.image_label2)
         group_box2.setLayout(group_box2_grid)
-        # FOR TEST
 
+        # waiting images
         waiting_img = self.convert_cv_qt(cv2.imread('Python/imgs/waiting_sensor.jpg'), self.sensor_label_size)
         self.image_label.setPixmap(waiting_img)
         waiting_img = self.convert_cv_qt(cv2.imread('Python/imgs/waiting_webcam.jpg'), self.sensor_label_size)
@@ -165,13 +167,41 @@ class GuiApp(QWidget):
         self.time_label.setText(time_text)
         
         if sit_time > 1:
-            if (not self.youtube_dialog.isVisible()) and (not self.guide_dialog.isVisible()) and (int(sit_time) % 3 == 0):
-                self.guide_dialog.set_label(f'앉은지 {int(sit_time)}초가 지났습니다. 스트레칭을 시작하실래요?')
-                if self.tts_process.is_alive:
-                    self.tts_process.terminate()
-                self.tts_process = Process(target=self.tts.run, args=(f'앉은지 {int(sit_time)}초가 지났습니다. 스트레칭을 시작하실래요?', ))
-                self.tts_process.start()
+            if (not self.youtube_dialog.isVisible()) and (not self.guide_dialog.isVisible()) and (int(sit_time) % 10 == 0):
+                text = f'앉은지 {int(sit_time)}초가 지났습니다. 스트레칭을 시작하실래요?'
+                self.guide_dialog.set_label(text)
+                self.terminate_play_tts(text)
                 self.guide_dialog.show()
+
+            elif (not self.youtube_dialog.isVisible()) and (not self.guide_dialog.isVisible()) and (int(sit_time) % 5 == 0):
+                average_unbalnce = sum(self.average_unbalance) / max(1, len(self.average_unbalance))
+                average_degree = sum(self.average_degree) / max(1, len(self.average_degree))
+
+                if average_unbalnce > 20 and average_degree < 160:
+                    text = '전체적인 자세가 불균형합니다. 전신 스트레칭을 추천해드립니다.'
+                    self.terminate_play_tts(text)
+                    self.guide_dialog.set_label(text + " 여시겠습니까?")
+                    self.guide_dialog.show()
+                elif average_unbalnce > 20 and average_degree >= 160:
+                    text = '하반신의 자세가 불균형합니다. 하반신 스트레칭을 추천드립니다.'
+                    self.guide_dialog.set_label(text + " 여시겠습니까?")
+                    self.terminate_play_tts(text)
+                    self.guide_dialog.show()
+                elif average_unbalnce < 20 and average_degree < 160:
+                    text = '목의 자세가 좋지 않습니다. 거북목 스트레칭을 추천해드립니다.'
+                    self.guide_dialog.set_label(text + " 여시겠습니까?")
+                    self.terminate_play_tts(text)
+                    self.guide_dialog.show()
+                elif average_unbalnce < 20 and average_degree >= 160:
+                    text = '좋은 자세를 유지하고 있습니다. 그대로 유지해주세요.'
+                    self.guide_dialog.set_label(text + " 여시겠습니까?")
+                    self.terminate_play_tts(text)
+
+    def terminate_play_tts(self, text):
+        if self.tts_process.is_alive:
+            self.tts_process.terminate()
+        self.tts_process = Process(target=self.tts.run, args=(text, ))
+        self.tts_process.start()
 
     @pyqtSlot(tuple)  # Sensor Visualization
     def update_image(self, data):
@@ -181,6 +211,7 @@ class GuiApp(QWidget):
         self.image_label.setPixmap(qt_img)
 
         self.unbalance_level = abs((sum(self.pressure_sensors[:2]) / (sum(self.pressure_sensors[:2]) + sum(self.pressure_sensors[2:])) - 0.5) * 100)
+        self.average_unbalance.append(self.unbalance_level)
         self.update_info_label()
 
     @pyqtSlot(tuple)
@@ -189,10 +220,17 @@ class GuiApp(QWidget):
         cv_img , self.max_rad = data
         qt_img = self.convert_cv_qt(cv_img, self.pose_label_size)
         self.image_label2.setPixmap(qt_img)
+        self.average_degree.append(self.max_rad)
         self.update_info_label()
 
     def update_info_label(self):
-        self.info_label.setText(f'불균형도 : {float(self.unbalance_level):.3f}%, 허리 센서거리 : {self.waist_sonic}cm, 목 센서거리 : {self.neck_sonic}cm, 목 각도 : {float(self.max_rad):.1f}도')
+        average_unbalnce = sum(self.average_unbalance) / max(1, len(self.average_unbalance))
+        average_degree = sum(self.average_degree) / max(1, len(self.average_degree))
+        if average_degree == 360:
+            average_degree = -1
+        self.info_label.setText(
+        f"""불균형도 : {float(self.unbalance_level):.3f}%, 허리 센서거리 : {self.waist_sonic}cm, 목 센서거리 : {self.neck_sonic}cm, 목 각도 : {float(self.max_rad):.1f}도
+평균 불균형도 : {float(average_unbalnce):.3f}%, 평균 각도 : 목 각도 : {float(average_degree):.1f}도""")
     
     def convert_cv_qt(self, cv_img, size):
         """Convert from an opencv image to QPixmap"""
