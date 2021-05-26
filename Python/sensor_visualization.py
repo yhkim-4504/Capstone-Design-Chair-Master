@@ -44,7 +44,7 @@ class SensorVisualization:
             waist_sonic, neck_sonic = randint(10, 90), randint(10, 90)
 
             # 시각화
-            overlayed_img = self.visualize(self.org_img, pressure_sensors, waist_sonic, neck_sonic)
+            overlayed_img = self.visualize(self.org_img, pressure_sensors, waist_sonic, neck_sonic, 60)
 
             # 이미지 표시 및 종료조건
             cv2.imshow('image', overlayed_img)
@@ -54,12 +54,12 @@ class SensorVisualization:
         cv2.destroyAllWindows()
 
     # 센서값을 받아서 시각화(draw img with sensors)
-    def visualize(self, img: np.ndarray, pressure_sensors: Sequence, waist_sonic: int, neck_sonic: int) -> np.ndarray:
+    def visualize(self, img: np.ndarray, pressure_sensors: Sequence, waist_sonic: int, neck_sonic: int, max: int) -> np.ndarray:
         overlay = img.copy()
 
         # 센서값에 따른 원 그리기
         for pos, sensor_value in zip(self.pos_list, pressure_sensors):
-            cv2.circle(overlay, pos, sensor_value, [40, 40, 255], -1)
+            cv2.circle(overlay, pos, round(sensor_value/max*60), [40, 40, 255], -1)
 
         # 알파채널을 이용한 블랜드합성
         alpha = 0.4
