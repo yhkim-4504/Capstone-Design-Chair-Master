@@ -18,6 +18,7 @@ class PoseThread(QThread):
 
     def run(self):
         pe = PoseEstimation('Python/hrnet_implementation/video_cut.mp4')
+        # pe = PoseEstimation(None)
         # pe = PoseEstimation(filename=None, camera_id=1)
 
         if not pe.is_opened:
@@ -173,9 +174,13 @@ class GuiApp(QWidget):
                 self.terminate_play_tts(text)
                 self.guide_dialog.show()
 
-            elif (not self.youtube_dialog.isVisible()) and (not self.guide_dialog.isVisible()) and (int(sit_time) % 30 == 0):
+            elif (not self.youtube_dialog.isVisible()) and (not self.guide_dialog.isVisible()) and (int(sit_time) % 10 == 0):
                 average_unbalnce = sum(self.average_unbalance) / max(1, len(self.average_unbalance))
                 average_degree = sum(self.average_degree) / max(1, len(self.average_degree))
+
+                # No condition
+                if average_unbalnce == 0 and average_degree == 0:
+                    return
 
                 if average_unbalnce > 20 and average_degree < 160:
                     text = '전체적인 자세가 불균형합니다. 전신 스트레칭을 추천해드립니다.'
