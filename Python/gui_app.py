@@ -50,7 +50,7 @@ class SensorThread(QThread):
             pressure_sensors = list(map(int, sensor_data[0:4]))
             waist_sonic, neck_sonic = 0, int(sensor_data[4])
             self.change_pixmap_signal.emit(sv.visualize(sv.org_img, pressure_sensors, waist_sonic, neck_sonic, 1024))
-            time.sleep(0.4)
+            # time.sleep(0.4)
 
 class GuiApp(QWidget):
     def __init__(self):
