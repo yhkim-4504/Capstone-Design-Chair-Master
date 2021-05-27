@@ -163,7 +163,7 @@ class GuiApp(QWidget):
 
     def timer_out_event(self):
         sit_time = time.time() - self.start_time
-        time_text = time.strftime('앉은 시간 : %H시 %M분 %S초', time.gmtime(sit_time))
+        time_text = time.strftime('앉은 시간 : %H시 %M분 %S초'.encode('unicode-escape').decode(), time.gmtime(sit_time)).encode().decode('unicode-escape')
         self.time_label.setText(time_text)
         
         if sit_time > 1:
