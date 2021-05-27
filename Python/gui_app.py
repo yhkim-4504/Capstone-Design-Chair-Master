@@ -9,7 +9,7 @@ from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt, QThread, QTimer
 from random import randint
 from .sensor_visualization import SensorVisualization
 from .pose_estimation import PoseEstimation
-from .gui.dialog import YoutubeDialog, GuideDialog, temp_url
+from .gui.dialog import YoutubeDialog, GuideDialog, temp_url, url_list
 from .tts_guide import TTS
 from multiprocessing import Process
 
@@ -17,8 +17,12 @@ class PoseThread(QThread):
     change_pixmap_signal = pyqtSignal(tuple)
 
     def run(self):
-        # pe = PoseEstimation('Python/hrnet_implementation/video_cut.mp4')
-        pe = PoseEstimation(filename=None)
+        pe = PoseEstimation('Python/hrnet_implementation/video_cut.mp4')
+        # pe = PoseEstimation(filename=None, camera_id=1)
+
+        if not pe.is_opened:
+            print('Video Capture Error')
+            return
 
         while True:
             ret, cv_img = pe.video.read()
@@ -129,10 +133,10 @@ class GuiApp(QWidget):
         waiting_img = self.convert_cv_qt(cv2.imread('Python/imgs/waiting_webcam.jpg'), self.sensor_label_size)
         self.image_label2.setPixmap(waiting_img)
 
-        # buttons
-        self.btn1 = QPushButton('btn1', self)
-        self.btn1.clicked.connect(self.btn1_clicked)
-        self.btn2 = QPushButton('btn2', self)
+        # # buttons
+        # self.btn1 = QPushButton('btn1', self)
+        # self.btn1.clicked.connect(self.btn1_clicked)
+        # self.btn2 = QPushButton('btn2', self)
 
         # dialogs
         self.youtube_dialog = YoutubeDialog(self)
@@ -145,17 +149,13 @@ class GuiApp(QWidget):
         grid.addWidget(group_box1, 0, 0)
         grid.addWidget(group_box2, 0, 1)
         grid.addWidget(self.info_label, 1, 0, 1, 2)
-        grid.addWidget(self.btn1, 2, 0)
-        grid.addWidget(self.btn2, 2, 1)
+        # grid.addWidget(self.btn1, 2, 0)
+        # grid.addWidget(self.btn2, 2, 1)
         grid.addWidget(self.time_label, 3, 0)
         self.setLayout(grid)
 
-    def btn1_clicked(self):
-        self.guide_dialog.show()
-
     def guide_yes_btn(self):
         self.guide_dialog.close()
-        self.youtube_dialog.set_webview_url(temp_url)
         self.youtube_dialog.show()
 
     def guide_no_btn(self):
@@ -181,16 +181,19 @@ class GuiApp(QWidget):
                     text = '전체적인 자세가 불균형합니다. 전신 스트레칭을 추천해드립니다.'
                     self.terminate_play_tts(text)
                     self.guide_dialog.set_label(text + " 여시겠습니까?")
+                    self.youtube_dialog.set_webview_url(url_list['whole_body'])
                     self.guide_dialog.show()
                 elif average_unbalnce > 20 and average_degree >= 160:
                     text = '하반신의 자세가 불균형합니다. 하반신 스트레칭을 추천드립니다.'
                     self.guide_dialog.set_label(text + " 여시겠습니까?")
                     self.terminate_play_tts(text)
+                    self.youtube_dialog.set_webview_url(url_list['lower_body'])
                     self.guide_dialog.show()
                 elif average_unbalnce < 20 and average_degree < 160:
                     text = '목의 자세가 좋지 않습니다. 거북목 스트레칭을 추천해드립니다.'
                     self.guide_dialog.set_label(text + " 여시겠습니까?")
                     self.terminate_play_tts(text)
+                    self.youtube_dialog.set_webview_url(url_list['turtle_neck'])
                     self.guide_dialog.show()
                 elif average_unbalnce < 20 and average_degree >= 160:
                     text = '좋은 자세를 유지하고 있습니다. 그대로 유지해주세요.'
