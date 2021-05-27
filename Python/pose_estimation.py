@@ -14,7 +14,6 @@ from Python.hrnet_implementation.misc.utils import find_person_id_associations
 filename = 'Python/hrnet_implementation/video_cut.mp4'
 image_resolution = (384, 288)
 device = torch.device('cpu')
-camera_id = 0
 single_person = True
 disable_tracking = False
 max_batch_size=16
@@ -59,15 +58,15 @@ skeleton = [(3, 5), (5, 11), (11, 13), (13, 15), (4, 6), (6, 12), (12, 14), (14,
 ###
 
 class PoseEstimation:
-    def __init__(self, filename):
+    def __init__(self, filename, camera_id=0):
         if filename is not None:
             # rotation_code = check_video_rotation(filename)
             self.video = cv2.VideoCapture(filename)
-            assert self.video.isOpened()
         else:
             rotation_code = None
             self.video = cv2.VideoCapture(camera_id)
-            assert self.video.isOpened()
+
+        self.is_opened = self.video.isOpened()
 
         self.model = SimpleHRNet(
             hrnet_c,
