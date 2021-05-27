@@ -17,8 +17,8 @@ class PoseThread(QThread):
     change_pixmap_signal = pyqtSignal(tuple)
 
     def run(self):
-        pe = PoseEstimation('Python/hrnet_implementation/video_cut.mp4')
-        # pe = PoseEstimation(filename=None)
+        # pe = PoseEstimation('Python/hrnet_implementation/video_cut.mp4')
+        pe = PoseEstimation(filename=None)
 
         while True:
             ret, cv_img = pe.video.read()
@@ -44,7 +44,7 @@ class SensorThread(QThread):
             # waist_sonic, neck_sonic = randint(10, 90), randint(10, 90)
             # self.change_pixmap_signal.emit(sv.visualize(sv.org_img, pressure_sensors, waist_sonic, neck_sonic, 60))
             pressure_sensors = list(map(int, sensor_data[0:4]))
-            waist_sonic, neck_sonic = list(map(int, sensor_data[4:6]))
+            waist_sonic, neck_sonic = 0, int(sensor_data[4])
             self.change_pixmap_signal.emit(sv.visualize(sv.org_img, pressure_sensors, waist_sonic, neck_sonic, 1024))
             time.sleep(0.4)
 
@@ -167,13 +167,13 @@ class GuiApp(QWidget):
         self.time_label.setText(time_text)
         
         if sit_time > 1:
-            if (not self.youtube_dialog.isVisible()) and (not self.guide_dialog.isVisible()) and (int(sit_time) % 10 == 0):
+            if (not self.youtube_dialog.isVisible()) and (not self.guide_dialog.isVisible()) and (int(sit_time) % 60 == 0):
                 text = f'앉은지 {int(sit_time)}초가 지났습니다. 스트레칭을 시작하실래요?'
                 self.guide_dialog.set_label(text)
                 self.terminate_play_tts(text)
                 self.guide_dialog.show()
 
-            elif (not self.youtube_dialog.isVisible()) and (not self.guide_dialog.isVisible()) and (int(sit_time) % 5 == 0):
+            elif (not self.youtube_dialog.isVisible()) and (not self.guide_dialog.isVisible()) and (int(sit_time) % 30 == 0):
                 average_unbalnce = sum(self.average_unbalance) / max(1, len(self.average_unbalance))
                 average_degree = sum(self.average_degree) / max(1, len(self.average_degree))
 
