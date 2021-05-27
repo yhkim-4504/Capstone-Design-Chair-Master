@@ -5,6 +5,11 @@ from PyQt5 import QtWebEngineWidgets
 
 temp_url = "https://www.youtube.com/embed/HtQmxoWytIA"
 
+url_list = {'turtle_neck': 'https://www.youtube.com/embed/Io5NYpzfsEU?start=37',
+            'whole_body': 'https://www.youtube.com/embed/XZCJRfhYJ-w?start=39',
+            'lower_body': 'https://www.youtube.com/embed/--MMq6I07b4?start=23',
+            }
+
 class YoutubeDialog(QDialog):
     def __init__(self, parent):
         super().__init__(parent=parent)
