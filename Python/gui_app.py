@@ -17,9 +17,9 @@ class PoseThread(QThread):
     change_pixmap_signal = pyqtSignal(tuple)
 
     def run(self):
-        pe = PoseEstimation('Python/hrnet_implementation/video_cut.mp4')
+        # pe = PoseEstimation('Python/hrnet_implementation/video_cut.mp4')
         # pe = PoseEstimation(None)
-        # pe = PoseEstimation(filename=None, camera_id=1)
+        pe = PoseEstimation(filename=None, camera_id=0)
 
         if not pe.is_opened:
             print('Video Capture Error')
@@ -174,7 +174,7 @@ class GuiApp(QWidget):
                 self.terminate_play_tts(text)
                 self.guide_dialog.show()
 
-            elif (not self.youtube_dialog.isVisible()) and (not self.guide_dialog.isVisible()) and (int(sit_time) % 10 == 0):
+            elif (not self.youtube_dialog.isVisible()) and (not self.guide_dialog.isVisible()) and (int(sit_time) % 30 == 0):
                 average_unbalnce = sum(self.average_unbalance) / max(1, len(self.average_unbalance))
                 average_degree = sum(self.average_degree) / max(1, len(self.average_degree))
 
@@ -205,6 +205,9 @@ class GuiApp(QWidget):
                     self.guide_dialog.set_label(text + " 여시겠습니까?")
                     self.terminate_play_tts(text)
 
+                self.average_degree.clear()
+                self.average_unbalance.clear()
+
     def terminate_play_tts(self, text):
         if self.tts_process.is_alive:
             self.tts_process.terminate()
@@ -228,7 +231,8 @@ class GuiApp(QWidget):
         cv_img , self.max_rad = data
         qt_img = self.convert_cv_qt(cv_img, self.pose_label_size)
         self.image_label2.setPixmap(qt_img)
-        self.average_degree.append(self.max_rad)
+        if self.max_rad != -1:
+            self.average_degree.append(self.max_rad)
         self.update_info_label()
 
     def update_info_label(self):
