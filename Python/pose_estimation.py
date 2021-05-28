@@ -123,7 +123,7 @@ class PoseEstimation:
         drawed_img = frame
         points = pts[0]
         for i, pt in enumerate(points):
-            if (i in keypoints.keys()) and (pt[2] > 0.5):
+            if (i in keypoints.keys()) and (pt[2] >= 0.5):
                 if i in (3, 5, 11, 13, 15):
                     color = (255, 0, 0)
                 else:
@@ -131,20 +131,24 @@ class PoseEstimation:
                 cv2.circle(drawed_img, (int(pt[1]), int(pt[0])), 5, color, -1)
                 
         for pt1, pt2 in skeleton:
-            if points[pt1][2] > 0.5 and points[pt2][2] > 0.5:
+            if points[pt1][2] >= 0.5 and points[pt2][2] >= 0.5:
                 if pt1%2 == 1:
                     color = (200, 0, 0)
                 else:
                     color = (0, 0, 200)
                 cv2.line(drawed_img, (int(points[pt1][1]), int(points[pt1][0])), (int(points[pt2][1]), int(points[pt2][0])), color, 2)
-        
+
         v1, v2 = (points[5] - points[3])[:2], (points[5] - points[11])[:2]
         cos_theta = np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2))
         rad1 = np.arccos(cos_theta) / np.pi * 180
 
+    
         v1, v2 = (points[6] - points[4])[:2], (points[6] - points[12])[:2]
         cos_theta = np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2))
         rad2 = np.arccos(cos_theta) / np.pi * 180
+        
+        if points[6][2]<0.5 and points[4][2]<0.5 and points[12][2]<0.5 and points[5][2]<0.5 and points[3][2]<0.5 and points[11][2]<0.5:
+            rad1, rad2 = -1, -1
         
         fps = 1. / (time.time() - t)
         # print(f'\rframerate: {fps:.3}, rad : {rad:.5f}', end='')
