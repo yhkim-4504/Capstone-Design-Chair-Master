@@ -17,9 +17,9 @@ class PoseThread(QThread):
     change_pixmap_signal = pyqtSignal(tuple)
 
     def run(self):
-        # pe = PoseEstimation('Python/hrnet_implementation/video_cut.mp4')
+        pe = PoseEstimation('Python/hrnet_implementation/video_cut.mp4')
         # pe = PoseEstimation(None)
-        pe = PoseEstimation(filename=None, camera_id=0)
+        # pe = PoseEstimation(filename=None, camera_id=0)
 
         if not pe.is_opened:
             print('Video Capture Error')
@@ -113,7 +113,7 @@ class GuiApp(QWidget):
         self.image_label.resize(self.sensor_label_size[0], self.sensor_label_size[1])
         self.image_label2 = QLabel('label2', self)
         self.image_label2.resize(self.pose_label_size[0], self.pose_label_size[1])
-        self.info_label = QLabel('info1', self)
+        self.info_label = QLabel('연결에 실패했습니다.', self)
         self.info_label.setFont(QtGui.QFont("맑은고딕", 20))
         self.time_label = QLabel('time', self)
 
@@ -156,10 +156,14 @@ class GuiApp(QWidget):
         self.setLayout(grid)
 
     def guide_yes_btn(self):
+        if self.tts_process.is_alive:
+            self.tts_process.terminate()
         self.guide_dialog.close()
         self.youtube_dialog.show()
 
     def guide_no_btn(self):
+        if self.tts_process.is_alive:
+            self.tts_process.terminate()
         self.guide_dialog.close()
 
     def timer_out_event(self):
@@ -174,7 +178,7 @@ class GuiApp(QWidget):
                 self.terminate_play_tts(text)
                 self.guide_dialog.show()
 
-            elif (not self.youtube_dialog.isVisible()) and (not self.guide_dialog.isVisible()) and (int(sit_time) % 30 == 0):
+            elif (not self.youtube_dialog.isVisible()) and (not self.guide_dialog.isVisible()) and (int(sit_time) % 10 == 0):
                 average_unbalnce = sum(self.average_unbalance) / max(1, len(self.average_unbalance))
                 average_degree = sum(self.average_degree) / max(1, len(self.average_degree))
 
