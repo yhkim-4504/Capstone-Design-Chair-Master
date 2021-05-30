@@ -17,9 +17,9 @@ class PoseThread(QThread):
     change_pixmap_signal = pyqtSignal(tuple)
 
     def run(self):
-        pe = PoseEstimation('Python/hrnet_implementation/video_cut.mp4')
+        # pe = PoseEstimation('Python/hrnet_implementation/video_cut.mp4')
         # pe = PoseEstimation(None)
-        # pe = PoseEstimation(filename=None, camera_id=0)
+        pe = PoseEstimation(filename=None, camera_id=0)
 
         if not pe.is_opened:
             print('Video Capture Error')
@@ -178,7 +178,7 @@ class GuiApp(QWidget):
                 self.terminate_play_tts(text)
                 self.guide_dialog.show()
 
-            elif (not self.youtube_dialog.isVisible()) and (not self.guide_dialog.isVisible()) and (int(sit_time) % 10 == 0):
+            elif (not self.youtube_dialog.isVisible()) and (not self.guide_dialog.isVisible()) and (int(sit_time) % 30 == 0):
                 average_unbalnce = sum(self.average_unbalance) / max(1, len(self.average_unbalance))
                 average_degree = sum(self.average_degree) / max(1, len(self.average_degree))
 
@@ -198,13 +198,13 @@ class GuiApp(QWidget):
                     self.terminate_play_tts(text)
                     self.youtube_dialog.set_webview_url(url_list['lower_body'])
                     self.guide_dialog.show()
-                elif average_unbalnce < 20 and average_degree < 160:
+                elif average_unbalnce <= 20 and average_degree < 160:
                     text = '목의 자세가 좋지 않습니다. 거북목 스트레칭을 추천해드립니다.'
                     self.guide_dialog.set_label(text + " 여시겠습니까?")
                     self.terminate_play_tts(text)
                     self.youtube_dialog.set_webview_url(url_list['turtle_neck'])
                     self.guide_dialog.show()
-                elif average_unbalnce < 20 and average_degree >= 160:
+                elif average_unbalnce <= 20 and average_degree >= 160:
                     text = '좋은 자세를 유지하고 있습니다. 그대로 유지해주세요.'
                     self.guide_dialog.set_label(text + " 여시겠습니까?")
                     self.terminate_play_tts(text)
